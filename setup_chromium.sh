@@ -8,7 +8,7 @@
 # ╚═════╝ ╚═╝╚══════╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
 #
 # Chromium Containers Manager
-# Версия: 1.0
+# Версия: 1.1
 # Описание: Скрипт для управления контейнерами Chromium с поддержкой прокси
 
 # Цвета для вывода
@@ -143,10 +143,71 @@ show_help() {
     echo "  $0 list                                       # Показать список контейнеров"
 }
 
+# Интерактивное меню
+show_interactive_menu() {
+    clear
+    echo -e "${BLUE}==========================================${NC}"
+    echo -e "${BLUE}        DIZIMAIN CHROMIUM MANAGER        ${NC}"
+    echo -e "${BLUE}==========================================${NC}"
+    echo ""
+    echo -e "1) ${GREEN}Создать контейнер${NC}"
+    echo -e "2) ${RED}Удалить контейнер${NC}"
+    echo -e "3) ${BLUE}Показать список контейнеров${NC}"
+    echo -e "4) ${YELLOW}Выход${NC}"
+    echo ""
+    echo -n "Выберите опцию (1-4): "
+    read choice
+
+    case $choice in
+        1)
+            echo -n "Введите имя контейнера (например, chromium1): "
+            read container_name
+            echo -n "Введите порт (например, 3001): "
+            read port
+            echo -n "Использовать прокси? (y/n): "
+            read use_proxy
+            
+            if [[ "$use_proxy" == "y" || "$use_proxy" == "Y" ]]; then
+                echo -n "Введите прокси в формате ip:port:login:pass: "
+                read proxy
+                create_chromium_container "$container_name" "$port" "$proxy"
+            else
+                create_chromium_container "$container_name" "$port"
+            fi
+            ;;
+        2)
+            echo -n "Введите имя контейнера для удаления: "
+            read container_name
+            remove_chromium_container "$container_name"
+            ;;
+        3)
+            list_chromium_containers
+            ;;
+        4)
+            echo -e "${GREEN}До свидания!${NC}"
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}Неверный выбор!${NC}"
+            ;;
+    esac
+    
+    echo ""
+    echo -n "Нажмите Enter для возврата в меню..."
+    read
+    show_interactive_menu
+}
+
 # Главная функция
 main() {
     # Проверяем наличие Docker
     check_docker
+    
+    # Если аргументы не переданы, показываем интерактивное меню
+    if [ $# -eq 0 ]; then
+        show_interactive_menu
+        exit 0
+    fi
     
     # Обрабатываем аргументы командной строки
     local action=$1
