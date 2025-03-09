@@ -8,26 +8,8 @@
 # ╚═════╝ ╚═╝╚══════╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
 #
 # Chromium Containers Manager
-# Версия: 1.3
+# Версия: 1.4
 # Описание: Скрипт для управления контейнерами Chromium с поддержкой прокси
-
-# Определение режима запуска
-SCRIPT_NAME=$(basename "$0")
-if [[ "$SCRIPT_NAME" == "bash" || "$0" == "/dev/fd/"* ]]; then
-    # Запущен через curl
-    INTERACTIVE_MODE=true
-    # Если переданы параметры напрямую в curl, используем их
-    if [ "$#" -gt 0 ]; then
-        INTERACTIVE_MODE=false
-    fi
-else
-    # Запущен как обычный скрипт
-    if [ "$#" -eq 0 ]; then
-        INTERACTIVE_MODE=true
-    else
-        INTERACTIVE_MODE=false
-    fi
-fi
 
 # Цвета для вывода
 RED='\033[0;31m'
@@ -35,6 +17,25 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Определение режима запуска и нормализация аргументов
+parse_arguments() {
+    # Проверяем, есть ли аргументы
+    if [ "$#" -eq 0 ]; then
+        INTERACTIVE_MODE=true
+        return
+    fi
+    
+    # Есть аргументы - неинтерактивный режим
+    INTERACTIVE_MODE=false
+    
+    # Первый аргумент - действие
+    ACTION="$1"
+    shift
+    
+    # Остальные аргументы сохраняем в массив
+    ARGS=("$@")
+}
 
 # Проверка наличия Docker
 check_docker() {
@@ -216,40 +217,28 @@ show_interactive_menu() {
     show_interactive_menu
 }
 
-# Главная функция
-main() {
-    # Проверяем наличие Docker
-    check_docker
-    
-    # Если интерактивный режим, запускаем меню
-    if [ "$INTERACTIVE_MODE" = true ]; then
-        show_interactive_menu
-        exit 0
-    fi
-    
-    # Обрабатываем аргументы командной строки
-    local action=$1
-    
-    case $action in
+# Выполнение действия в неинтерактивном режиме
+execute_action() {
+    case "$ACTION" in
         create)
             # Проверяем наличие необходимых аргументов
-            if [ -z "$2" ] || [ -z "$3" ]; then
+            if [ ${#ARGS[@]} -lt 2 ]; then
                 echo -e "${RED}Ошибка: Необходимо указать имя контейнера и порт.${NC}"
                 show_help
                 exit 1
             fi
             
-            create_chromium_container "$2" "$3" "$4"
+            create_chromium_container "${ARGS[0]}" "${ARGS[1]}" "${ARGS[2]}"
             ;;
         remove)
             # Проверяем наличие необходимых аргументов
-            if [ -z "$2" ]; then
+            if [ ${#ARGS[@]} -lt 1 ]; then
                 echo -e "${RED}Ошибка: Необходимо указать имя контейнера.${NC}"
                 show_help
                 exit 1
             fi
             
-            remove_chromium_container "$2"
+            remove_chromium_container "${ARGS[0]}"
             ;;
         list)
             list_chromium_containers
@@ -258,11 +247,27 @@ main() {
             show_help
             ;;
         *)
-            echo -e "${RED}Неизвестное действие: $action${NC}"
+            echo -e "${RED}Неизвестное действие: $ACTION${NC}"
             show_help
             exit 1
             ;;
     esac
+}
+
+# Главная функция
+main() {
+    # Разбираем аргументы
+    parse_arguments "$@"
+    
+    # Проверяем наличие Docker
+    check_docker
+    
+    # Выбираем режим работы
+    if [ "$INTERACTIVE_MODE" = true ]; then
+        show_interactive_menu
+    else
+        execute_action
+    fi
 }
 
 # Запускаем главную функцию с переданными аргументами
