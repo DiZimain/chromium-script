@@ -8,14 +8,25 @@
 # ╚═════╝ ╚═╝╚══════╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
 #
 # Chromium Containers Manager
-# Версия: 1.2
+# Версия: 1.3
 # Описание: Скрипт для управления контейнерами Chromium с поддержкой прокси
 
-# Определение прямого вызова или через curl
-if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
+# Определение режима запуска
+SCRIPT_NAME=$(basename "$0")
+if [[ "$SCRIPT_NAME" == "bash" || "$0" == "/dev/fd/"* ]]; then
+    # Запущен через curl
     INTERACTIVE_MODE=true
+    # Если переданы параметры напрямую в curl, используем их
+    if [ "$#" -gt 0 ]; then
+        INTERACTIVE_MODE=false
+    fi
 else
-    INTERACTIVE_MODE=false
+    # Запущен как обычный скрипт
+    if [ "$#" -eq 0 ]; then
+        INTERACTIVE_MODE=true
+    else
+        INTERACTIVE_MODE=false
+    fi
 fi
 
 # Цвета для вывода
@@ -210,8 +221,8 @@ main() {
     # Проверяем наличие Docker
     check_docker
     
-    # Если запуск через curl или без аргументов, запускаем интерактивный режим
-    if [ "$INTERACTIVE_MODE" = true ] || [ $# -eq 0 ]; then
+    # Если интерактивный режим, запускаем меню
+    if [ "$INTERACTIVE_MODE" = true ]; then
         show_interactive_menu
         exit 0
     fi
