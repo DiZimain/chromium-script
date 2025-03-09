@@ -80,13 +80,15 @@ for ((i=1; i<=num_profiles; i++)); do
     # Добавляем прокси, если они есть
     if [ "$use_proxy" == "y" ] && [ $((i-1)) -lt ${#proxies[@]} ]; then
         proxy=${proxies[$((i-1))]}
-        IFS=':' read -r ip port login pass <<< "$proxy"
-        cmd="docker run -d --name $container_name -p $port:3000 -e HTTP_PROXY=\"http://$login:$pass@$ip:$port\" -e HTTPS_PROXY=\"http://$login:$pass@$ip:$port\" linuxserver/chromium"
+        IFS=':' read -r proxy_ip proxy_port proxy_login proxy_pass <<< "$proxy"
+        cmd="docker run -d --name $container_name -p $port:3000 -e HTTP_PROXY=\"http://$proxy_login:$proxy_pass@$proxy_ip:$proxy_port\" -e HTTPS_PROXY=\"http://$proxy_login:$proxy_pass@$proxy_ip:$proxy_port\" linuxserver/chromium"
     fi
     
     # Выполняем команду
     echo "Запускаем $container_name на порту $port..."
-    eval "$cmd"
+    if ! output=$(eval "$cmd" 2>&1); then
+        echo "Ошибка при запуске $container_name: $output"
+    fi
 done
 
 # Вывод результатов
