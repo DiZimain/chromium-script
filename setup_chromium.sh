@@ -166,7 +166,7 @@ show_help() {
 show_interactive_menu() {
     clear
     echo -e "${BLUE}==========================================${NC}"
-    echo -e "${BLUE}        DIZIMAIN CHROMIUM MANAGER        ${NC}"
+    echo -e "${BLUE}                  DIZIMAIN                ${NC}"
     echo -e "${BLUE}==========================================${NC}"
     echo ""
     echo -e "1) ${GREEN}Создать контейнер${NC}"
