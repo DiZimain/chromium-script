@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Проверка, установлен ли Docker
 if ! command -v docker &> /dev/null; then
@@ -67,27 +68,31 @@ for ((i=1; i<=num_profiles; i++)); do
     container_name="${name_prefix}-${i}"
     port=$((base_port + i - 1))
     
-    # Проверка, существует ли контейнер с таким именем
-    if [ "$(docker ps -a -q -f name=$container_name)" ]; then
+    # Если контейнер с таким именем существует, останавливаем и удаляем его
+    if [ "$(docker ps -a -q -f name="^${container_name}$")" ]; then
         echo "Контейнер $container_name уже существует. Останавливаем и удаляем..."
-        docker stop "$container_name" > /dev/null 2>&1
-        docker rm "$container_name" > /dev/null 2>&1
+        docker stop "$container_name" > /dev/null 2>&1 || true
+        docker rm "$container_name" > /dev/null 2>&1 || true
     fi
     
-    # Формируем команду
-    cmd="docker run -d --name $container_name -p $port:3001 linuxserver/chromium"
+    # Формируем команду запуска (проброс порта на 3001)
+    cmd="docker run -d --name $container_name -p $port:3001"
     
-    # Добавляем прокси, если они есть
+    # Если используются прокси, добавляем переменные окружения
     if [ "$use_proxy" == "y" ] && [ $((i-1)) -lt ${#proxies[@]} ]; then
         proxy=${proxies[$((i-1))]}
         IFS=':' read -r proxy_ip proxy_port proxy_login proxy_pass <<< "$proxy"
-        cmd="docker run -d --name $container_name -p $port:3001 -e HTTP_PROXY=\"http://$proxy_login:$proxy_pass@$proxy_ip:$proxy_port\" -e HTTPS_PROXY=\"http://$proxy_login:$proxy_pass@$proxy_ip:$proxy_port\" linuxserver/chromium"
+        cmd+=" -e HTTP_PROXY=\"http://$proxy_login:$proxy_pass@$proxy_ip:$proxy_port\" -e HTTPS_PROXY=\"http://$proxy_login:$proxy_pass@$proxy_ip:$proxy_port\""
     fi
     
-    # Выполняем команду
-    echo "Запускаем $container_name на порту $port..."
+    # Добавляем образ
+    cmd+=" linuxserver/chromium"
+    
+    echo "Выполняем: $cmd"
     if ! output=$(eval "$cmd" 2>&1); then
         echo "Ошибка при запуске $container_name: $output"
+    else
+        echo "Контейнер $container_name запущен (ID: $output)"
     fi
 done
 
