@@ -19,6 +19,15 @@ if ! [[ "$num_profiles" =~ ^[0-9]+$ ]] || [ "$num_profiles" -lt 1 ]; then
     exit 1
 fi
 
+# Запрос префикса имени контейнеров
+read -p "Введите префикс имени для контейнеров (например, chrome-2025-03-10) или оставьте пустым для автоматического имени: " name_prefix
+if [ -z "$name_prefix" ]; then
+    # Если пользователь не ввёл префикс, генерируем его с временной меткой
+    name_prefix="chrome-$(date +%Y%m%d-%H%M%S)"
+fi
+# Убедимся, что префикс не содержит недопустимых символов
+name_prefix=$(echo "$name_prefix" | tr -dc 'a-zA-Z0-9-')
+
 # Запрос использования прокси
 read -p "Использовать прокси? (y/n): " use_proxy
 if [[ "$use_proxy" != "y" && "$use_proxy" != "n" ]]; then
@@ -55,8 +64,15 @@ fi
 # Запуск контейнеров
 echo "Запускаем контейнеры..."
 for ((i=1; i<=num_profiles; i++)); do
-    container_name="chromium$i"
+    container_name="${name_prefix}-${i}"
     port=$((base_port + i - 1))
+    
+    # Проверка, существует ли контейнер с таким именем
+    if [ "$(docker ps -a -q -f name=$container_name)" ]; then
+        echo "Контейнер $container_name уже существует. Останавливаем и удаляем..."
+        docker stop "$container_name" > /dev/null 2>&1
+        docker rm "$container_name" > /dev/null 2>&1
+    fi
     
     # Формируем команду
     cmd="docker run -d --name $container_name -p $port:3000 linuxserver/chromium"
